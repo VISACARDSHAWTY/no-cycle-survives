@@ -19,5 +19,37 @@ def precedence_graph(schedule):
         i = i + 1
     return graph
 
+def has_cycle(graph):
+    visited = set()
 
+    for start_node in graph:
+        if start_node in visited:
+            continue
+        stack = [(start_node, False)] 
+        rec_stack = set()
+        while stack:
+            node, finished = stack.pop()
+            if finished:
+                rec_stack.remove(node)
+                continue
+            if node in rec_stack:
+                return True 
+            if node in visited:
+                continue
+            visited.add(node)
+            rec_stack.add(node)
+            stack.append((node, True))
+            for neighbor in graph.get(node, []):
+                if neighbor not in visited:
+                    stack.append((neighbor, False))
+                elif neighbor in rec_stack:
+                    return True
+    return False
+        
+s , t = parse_schedule("operations.txt")
+pg = precedence_graph(s)
+print("Precedence Graph:")
+for node, neighbors in pg.items():
+    print(f"{node} -> {', '.join(str(n) for n in neighbors)}")
+print(has_cycle(pg))
     
