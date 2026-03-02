@@ -18,9 +18,22 @@ class Operation:
     def __repr__(self):
         return self.__str__()
 
-
-def parse_operations(file_path):
-    operations = []
+class Transaction:
+    def __init__(self,id):
+        self.id = id
+        self.operations = []
+    
+    def add_operation(self, operation):
+        self.operations.append(operation)
+    
+    def __str__(self):
+        return f"Transaction {self.id}: " + ", ".join(str(op) for op in self.operations)
+    
+    def __repr__(self):
+        return self.__str__()
+def parse_schedule(file_path):
+    schedule = []
+    transactions = dict()
     op_map = {
         "START": 's',
         "READ": 'r',
@@ -38,9 +51,11 @@ def parse_operations(file_path):
             line = line.strip()
             if not line:
                 continue
-
+            if line.startswith("#"):
+                continue
             matched = False
             for op_name, op_code in op_map.items():
+                
                 if line.startswith(f"{op_name}(") and line.endswith(")"):
                     content = line[len(op_name)+1:-1].split(',')
                     try:
@@ -64,7 +79,11 @@ def parse_operations(file_path):
                             if op_code in ['c', 'a']:
                                 done.add(transaction)
                                 started.discard(transaction)
-                        operations.append(Operation(op_code, transaction, variable))
+                        op = Operation(op_code, transaction, variable)
+                        schedule.append(op)
+                        if transaction not in transactions:
+                            transactions[transaction] = Transaction(transaction)
+                        transactions[transaction].add_operation(op)
                         matched = True
                     except (ValueError, IndexError):
                         print(f"ERROR! Invalid {op_name} operation format: {line}")
@@ -76,9 +95,10 @@ def parse_operations(file_path):
     if started:
         print(f"ERROR! Transactions not completed: {', '.join(map(str, started))}")
         return -1
-    return operations
+    return schedule , transactions
 
-parsed_operations = parse_operations('operations.txt')
-print("Parsed Operations:")
-print(parsed_operations)
+
+s , t = parse_schedule("operations.txt")
+print(s)
+print(t)
 
