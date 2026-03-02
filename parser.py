@@ -31,6 +31,7 @@ class Transaction:
     
     def __repr__(self):
         return self.__str__()
+
 def parse_schedule(file_path):
     schedule = []
     transactions = dict()
@@ -97,8 +98,8 @@ def parse_schedule(file_path):
         return -1
     return schedule , transactions
 
-
-s , t = parse_schedule("operations.txt")
-print(s)
-print(t)
+if __name__ == "__main__":
+    s , t = parse_schedule("operations.txt")
+    print(s)
+    print(t)
 
