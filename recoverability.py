@@ -16,6 +16,23 @@ def read_dependencies(schedule):
             commit_index[op.transaction] = i
     return read_from, commit_index
 
+def is_recoverable(read_from, commit_index):
+    for reader, writer, var, read_i in read_from:
+            if writer not in commit_index:
+                return False, f"{reader} commits but {writer} never commits (read {var})"
+            if commit_index[reader] < commit_index[writer]:
+                return False, f"{reader} commits before {writer} (read {var})"
+    return True, "All commit orders valid"
+
+def is_aca(read_from, commit_index):
+    for reader, writer, var, read_i in read_from:
+        if writer not in commit_index:
+            return False, f"{reader} reads {var} but {writer} never commits"
+        if commit_index[writer] > read_i:
+            return False, f"{reader} reads {var} before {writer} commits"
+
+    return True, "All reads are from committed transactions"
+
 s , t = parse_schedule("operations.txt")
 pg = precedence_graph(s)
 print("Precedence Graph:")
