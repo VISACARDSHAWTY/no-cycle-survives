@@ -9,13 +9,16 @@ def read_dependencies(schedule):
     for i, op in enumerate(schedule):
         if op.type in ['w' , 'i', 'd']:
             if op.variable in last_write:
-                prev_writer = last_write[op.variable]
-                write_after.append((op.transaction, prev_writer, op.variable, i))
+                if last_write[op.variable] != op.transaction:
+                    prev_writer = last_write[op.variable]
+                    write_after.append((op.transaction, prev_writer, op.variable, i))
             last_write[op.variable] = op.transaction
+            
         elif op.type == 'r':
             if op.variable in last_write:
-                writer = last_write[op.variable]
-                read_from.append((op.transaction, writer, op.variable, i))
+                if last_write[op.variable] != op.transaction:
+                    writer = last_write[op.variable]
+                    read_from.append((op.transaction, writer, op.variable, i))
 
         elif op.type == 'c':
             commit_index[op.transaction] = i
@@ -71,7 +74,7 @@ print("Precedence Graph:")
 for node, neighbors in pg.items():
     print(f"{node} -> {', '.join(str(n) for n in neighbors)}")
 print(has_cycle(pg))
-rf , ci = read_dependencies(s)
+rf , wa , ci , fi = read_dependencies(s)
 print("Read-From Relationships:")
 for reader, writer, variable, index in rf:
     print(f"Transaction {reader} reads variable {variable} from Transaction {writer} at operation index {index}")
@@ -82,4 +85,7 @@ recoverable, message = is_recoverable(rf, ci)
 print(message)     
 print("\nACA Check:")
 aca, message = is_aca(rf, ci)
+print(message)
+print("\nStrict Schedule Check:")
+strict, message = is_strict(rf , wa, fi)
 print(message)
