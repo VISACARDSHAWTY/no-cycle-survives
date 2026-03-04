@@ -1,12 +1,17 @@
 from conflict import *
 def read_dependencies(schedule):
     read_from = []
+    write_after = []
     last_write = {}
     commit_index = {}
+    finish_index = {}
+    
     for i, op in enumerate(schedule):
         if op.type in ['w' , 'i', 'd']:
+            if op.variable in last_write:
+                prev_writer = last_write[op.variable]
+                write_after.append((op.transaction, prev_writer, op.variable, i))
             last_write[op.variable] = op.transaction
-
         elif op.type == 'r':
             if op.variable in last_write:
                 writer = last_write[op.variable]
@@ -14,7 +19,11 @@ def read_dependencies(schedule):
 
         elif op.type == 'c':
             commit_index[op.transaction] = i
-    return read_from, commit_index
+            finish_index[op.transaction] = i
+        elif op.type == 'a':
+            finish_index[op.transaction] = i
+        
+    return read_from, write_after, commit_index ,finish_index
 
 def is_recoverable(read_from, commit_index):
     for reader, writer, var, read_i in read_from:
@@ -33,6 +42,29 @@ def is_aca(read_from, commit_index):
 
     return True, "All reads are from committed transactions"
 
+def is_strict(write_after , finish_index):
+    for writer, prev_writer, var, write_i in write_after:
+        if prev_writer not in finish_index:
+            return False, f"{writer} writes {var} but previous writer {prev_writer} never finishes"
+        if finish_index[prev_writer] > write_i:
+            return False, f"{writer} writes {var} before previous writer {prev_writer} finishes"
+
+    return True, "All writes are after previous writers have finished"
+
+def is_strict(read_from, write_after, finish_index):
+    for writer, prev_writer, var, write_i in write_after:
+        if prev_writer not in finish_index:
+            return False, f"{writer} writes {var} but previous writer {prev_writer} never finishes"
+        if finish_index[prev_writer] > write_i:
+            return False, f"{writer} writes {var} before previous writer {prev_writer} finishes (commit/abort)"
+ 
+    for reader, writer, var, read_i in read_from:
+        if writer not in finish_index:
+            return False, f"{reader} reads {var} but writer {writer} never finishes"
+        if finish_index[writer] > read_i:
+            return False, f"{reader} reads {var} before writer {writer} finishes (commit/abort)"
+
+    return True, "All reads and writes respect strict schedule rules"
 s , t = parse_schedule("operations.txt")
 pg = precedence_graph(s)
 print("Precedence Graph:")
@@ -45,3 +77,9 @@ for reader, writer, variable, index in rf:
     print(f"Transaction {reader} reads variable {variable} from Transaction {writer} at operation index {index}")
 print("Commit Indices:")
 for transaction, index in ci.items():   print(f"Transaction {transaction} commits at operation index {index}")  
+print("\nRecoverability Check:")
+recoverable, message = is_recoverable(rf, ci)
+print(message)     
+print("\nACA Check:")
+aca, message = is_aca(rf, ci)
+print(message)
