@@ -1,4 +1,5 @@
 from conflict import *
+from visualization import visualize_precedence_graph
 def read_dependencies(schedule):
     read_from = []
     write_after = []
@@ -89,3 +90,6 @@ print(message)
 print("\nStrict Schedule Check:")
 strict, message = is_strict(rf , wa, fi)
 print(message)
+
+print("Generating Precedence Graph Visualization...")
+visualize_precedence_graph(pg)
