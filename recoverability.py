@@ -2,31 +2,57 @@ from conflict import *
 def read_dependencies(schedule):
     read_from = []
     write_after = []
+    access_after = []
+    
     last_write = {}
+    last_access = {}
+    write_history = {} 
     commit_index = {}
     finish_index = {}
+    aborted = set()
     
     for i, op in enumerate(schedule):
-        if op.type in ['w' , 'i', 'd']:
+        if op.type in ['r', 'w', 'i', 'd']:
+            if op.variable in last_access:
+                prev_tx = last_access[op.variable]
+                if prev_tx != op.transaction:
+                    access_after.append((op.transaction, prev_tx, op.variable, i))
+            last_access[op.variable] = op.transaction
+
+        if op.type in ['w', 'i', 'd']:
+            if op.variable not in write_history:
+                write_history[op.variable] = []
+
             if op.variable in last_write:
-                if last_write[op.variable] != op.transaction:
-                    prev_writer = last_write[op.variable]
+                prev_writer = last_write[op.variable]
+                if prev_writer != op.transaction and prev_writer != None:
                     write_after.append((op.transaction, prev_writer, op.variable, i))
+                    print((op.transaction, prev_writer, op.variable, i))
+
+            write_history[op.variable].append(op.transaction)
             last_write[op.variable] = op.transaction
-            
+
         elif op.type == 'r':
             if op.variable in last_write:
-                if last_write[op.variable] != op.transaction:
-                    writer = last_write[op.variable]
+                writer = last_write[op.variable]
+                if writer != op.transaction and writer != None:
                     read_from.append((op.transaction, writer, op.variable, i))
 
         elif op.type == 'c':
             commit_index[op.transaction] = i
             finish_index[op.transaction] = i
+
         elif op.type == 'a':
             finish_index[op.transaction] = i
-        
-    return read_from, write_after, commit_index ,finish_index
+            aborted.add(op.transaction)
+
+            for var, history in write_history.items():
+                if history and history[-1] == op.transaction:
+                    while history and history[-1] in aborted:
+                        history.pop()
+                    last_write[var] = history[-1] if history else None
+
+    return read_from, write_after, access_after, commit_index, finish_index
 
 def is_recoverable(read_from, commit_index):
     for reader, writer, var, read_i in read_from:
@@ -68,13 +94,25 @@ def is_strict(read_from, write_after, finish_index):
             return False, f"{reader} reads {var} before writer {writer} finishes (commit/abort)"
 
     return True, "All reads and writes respect strict schedule rules"
+
+def is_rigorous(access_after, finish_index):
+
+    for tx, prev_tx, var, op_i in access_after:
+        if prev_tx not in finish_index:
+            return False, f"{tx} accesses {var} but previous access by {prev_tx} never finishes"
+
+        if finish_index[prev_tx] > op_i:
+            return False, f"{tx} accesses {var} before {prev_tx} finishes (commit/abort)"
+
+    return True, "All accesses occur after previous transactions finish"
+
 s , t = parse_schedule("operations.txt")
 pg = precedence_graph(s)
 print("Precedence Graph:")
 for node, neighbors in pg.items():
     print(f"{node} -> {', '.join(str(n) for n in neighbors)}")
 print(has_cycle(pg))
-rf , wa , ci , fi = read_dependencies(s)
+rf , wa , aa , ci , fi = read_dependencies(s)
 print("Read-From Relationships:")
 for reader, writer, variable, index in rf:
     print(f"Transaction {reader} reads variable {variable} from Transaction {writer} at operation index {index}")
@@ -88,4 +126,7 @@ aca, message = is_aca(rf, ci)
 print(message)
 print("\nStrict Schedule Check:")
 strict, message = is_strict(rf , wa, fi)
+print(message)
+print("\nRigorous Schedule Check:")
+rigorous, message = is_rigorous(aa, fi) 
 print(message)

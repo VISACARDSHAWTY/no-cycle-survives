@@ -46,10 +46,5 @@ def has_cycle(graph):
                     return True
     return False
         
-s , t = parse_schedule("operations.txt")
-pg = precedence_graph(s)
-print("Precedence Graph:")
-for node, neighbors in pg.items():
-    print(f"{node} -> {', '.join(str(n) for n in neighbors)}")
-print(has_cycle(pg))
+
     
