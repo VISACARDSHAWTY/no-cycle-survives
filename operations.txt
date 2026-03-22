@@ -1,5 +1,6 @@
 START(1)
 START(2)
+<<<<<<< HEAD
 START(3)
 START(4)
 WRITE(1,X)
@@ -10,3 +11,12 @@ WRITE(3,X)
 ABORT(3)
 READ(4,X)
 COMMIT(4)
+=======
+READ(2, X)
+WRITE(2, Y)
+READ(1, Y)
+WRITE(1, Y)
+COMMIT(2)
+READ(1, X)
+COMMIT(1)
+>>>>>>> 710a5a0c240ff0434d02d3a32b165e3ecf5e86f4

@@ -1,4 +1,5 @@
 from conflict import *
+from visualization import visualize_precedence_graph
 def read_dependencies(schedule):
     read_from = []
     write_after = []
