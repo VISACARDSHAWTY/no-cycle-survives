@@ -177,7 +177,8 @@ def analyze_schedule(content: str) -> dict:
         "read_from": rf,
         "write_after": wa,
         "access_after": aa,
-        "commit_indices": ci
+        "commit_indices": ci,
+        "precedence_graph": pg,
     }
 
 
