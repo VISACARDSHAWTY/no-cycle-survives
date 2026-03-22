@@ -108,53 +108,84 @@ def is_rigorous(access_after, finish_index):
 
     return True, "All accesses occur after previous transactions finish"
 
-def perform_analysis(content: str) -> str:
+def analyze_schedule(content: str) -> dict:
     parse_result = parse_schedule_from_text(content)
     if parse_result[0] is None:
-        return parse_result[2]  # error message
+        return {"error": parse_result[2]}
 
     schedule, transactions, _ = parse_result
 
-    result = []
-
     pg = precedence_graph(schedule)
-    result.append("Precedence Graph:")
-    for node, neighbors in pg.items():
-        result.append(f"{node} -> {', '.join(str(n) for n in neighbors)}")
-    result.append(f"Has Cycle: {has_cycle(pg)}")
+    has_cyc = has_cycle(pg)
 
-    rf , wa , aa , ci , fi = read_dependencies(schedule)
-    result.append("Read-From Relationships:")
-    for reader, writer, variable, index in rf:
-        result.append(f"Transaction {reader} reads variable {variable} from Transaction {writer} at operation index {index}")
-    result.append("Commit Indices:")
-    for transaction, index in ci.items():   
-        result.append(f"Transaction {transaction} commits at operation index {index}")  
+    rf, wa, aa, ci, fi = read_dependencies(schedule)
+    serial_result = {
+        "title": "Serializability (Conflict Serializability)",
+        "graph": "\n".join(f"T{node} → {', '.join(f'T{n}' for n in neighbors)}"
+                           for node, neighbors in sorted(pg.items())),
+        "cycle": "Has cycle: YES (not conflict serializable)" if has_cyc else "Has cycle: NO ✓ (conflict serializable)",
+        "status": "fail" if has_cyc else "pass"
+    }
+    rec_ok, rec_msg = is_recoverable(rf, ci)
+    recoverable_result = {
+        "title": "Recoverability",
+        "status": "pass" if rec_ok else "fail",
+        "message": rec_msg
+    }
+    aca_ok, aca_msg = is_aca(rf, ci)
+    aca_result = {
+        "title": "ACA (Avoid Cascading Aborts)",
+        "status": "pass" if aca_ok else "fail",
+        "message": aca_msg
+    }
+    strict_ok, strict_msg = is_strict(rf, wa, fi)
+    strict_result = {
+        "title": "Strict Schedule",
+        "status": "pass" if strict_ok else "fail",
+        "message": strict_msg
+    }
+    rig_ok, rig_msg = is_rigorous(aa, fi)
+    rigorous_result = {
+        "title": "Rigorous Schedule",
+        "status": "pass" if rig_ok else "fail",
+        "message": rig_msg
+    }
+    log_lines = []
+    if rf:
+        log_lines.append("Read-from dependencies:")
+        for r, w, v, idx in rf:
+            log_lines.append(f"  T{r} reads {v} from T{w} (op {idx})")
+    if wa:
+        log_lines.append("\nWrite-after dependencies:")
+        for w, pw, v, idx in wa:
+            log_lines.append(f"  T{w} writes {v} after T{pw} (op {idx})")
+    if aa:
+        log_lines.append("\nAccess-after dependencies:")
+        for t, pt, v, idx in aa:
+            log_lines.append(f"  T{t} accesses {v} after T{pt} (op {idx})")
 
-    result.append("\nRecoverability Check:")
-    recoverable, message = is_recoverable(rf, ci)
-    result.append(message)     
+    console_log = "\n".join(log_lines) if log_lines else "No dependency relationships detected."
 
-    result.append("\nACA Check:")
-    aca, message = is_aca(rf, ci)
-    result.append(message)
-
-    result.append("\nStrict Schedule Check:")
-    strict, message = is_strict(rf , wa, fi)
-    result.append(message)
-
-    result.append("\nRigorous Schedule Check:")
-    rigorous, message = is_rigorous(aa, fi) 
-    result.append(message)
-
-    return "\n".join(result)
+    return {
+        "error": None,
+        "serializability": serial_result,
+        "recoverability": recoverable_result,
+        "aca": aca_result,
+        "strict": strict_result,
+        "rigorous": rigorous_result,
+        "console": console_log,
+        "read_from": rf,
+        "write_after": wa,
+        "access_after": aa,
+        "commit_indices": ci
+    }
 
 
 if __name__ == "__main__":
     try:
         with open("operations.txt", "r", encoding="utf-8") as f:
             content = f.read()
-        print(perform_analysis(content))
+        print(analyze_schedule(content))
     except FileNotFoundError:
         print("operations.txt not found - GUI will still work with any .txt file")
 
