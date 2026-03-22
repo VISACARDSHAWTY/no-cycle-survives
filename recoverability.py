@@ -1,4 +1,5 @@
 from conflict import *
+from parser import parse_schedule_from_text
 from visualization import visualize_precedence_graph
 def read_dependencies(schedule):
     read_from = []
@@ -107,27 +108,53 @@ def is_rigorous(access_after, finish_index):
 
     return True, "All accesses occur after previous transactions finish"
 
-s , t = parse_schedule("operations.txt")
-pg = precedence_graph(s)
-print("Precedence Graph:")
-for node, neighbors in pg.items():
-    print(f"{node} -> {', '.join(str(n) for n in neighbors)}")
-print(has_cycle(pg))
-rf , wa , aa , ci , fi = read_dependencies(s)
-print("Read-From Relationships:")
-for reader, writer, variable, index in rf:
-    print(f"Transaction {reader} reads variable {variable} from Transaction {writer} at operation index {index}")
-print("Commit Indices:")
-for transaction, index in ci.items():   print(f"Transaction {transaction} commits at operation index {index}")  
-print("\nRecoverability Check:")
-recoverable, message = is_recoverable(rf, ci)
-print(message)     
-print("\nACA Check:")
-aca, message = is_aca(rf, ci)
-print(message)
-print("\nStrict Schedule Check:")
-strict, message = is_strict(rf , wa, fi)
-print(message)
-print("\nRigorous Schedule Check:")
-rigorous, message = is_rigorous(aa, fi) 
-print(message)
+def perform_analysis(content: str) -> str:
+    parse_result = parse_schedule_from_text(content)
+    if parse_result[0] is None:
+        return parse_result[2]  # error message
+
+    schedule, transactions, _ = parse_result
+
+    result = []
+
+    pg = precedence_graph(schedule)
+    result.append("Precedence Graph:")
+    for node, neighbors in pg.items():
+        result.append(f"{node} -> {', '.join(str(n) for n in neighbors)}")
+    result.append(f"Has Cycle: {has_cycle(pg)}")
+
+    rf , wa , aa , ci , fi = read_dependencies(schedule)
+    result.append("Read-From Relationships:")
+    for reader, writer, variable, index in rf:
+        result.append(f"Transaction {reader} reads variable {variable} from Transaction {writer} at operation index {index}")
+    result.append("Commit Indices:")
+    for transaction, index in ci.items():   
+        result.append(f"Transaction {transaction} commits at operation index {index}")  
+
+    result.append("\nRecoverability Check:")
+    recoverable, message = is_recoverable(rf, ci)
+    result.append(message)     
+
+    result.append("\nACA Check:")
+    aca, message = is_aca(rf, ci)
+    result.append(message)
+
+    result.append("\nStrict Schedule Check:")
+    strict, message = is_strict(rf , wa, fi)
+    result.append(message)
+
+    result.append("\nRigorous Schedule Check:")
+    rigorous, message = is_rigorous(aa, fi) 
+    result.append(message)
+
+    return "\n".join(result)
+
+
+if __name__ == "__main__":
+    try:
+        with open("operations.txt", "r", encoding="utf-8") as f:
+            content = f.read()
+        print(perform_analysis(content))
+    except FileNotFoundError:
+        print("operations.txt not found - GUI will still work with any .txt file")
+
