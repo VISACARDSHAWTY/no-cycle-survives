@@ -98,6 +98,65 @@ def parse_schedule(file_path):
         return -1
     return schedule , transactions
 
+def parse_schedule_from_text(content: str):
+    schedule = []
+    transactions = dict()
+    op_map = {
+        "START": 's',
+        "READ": 'r',
+        "WRITE": 'w',
+        "INCREMENT": 'i',
+        "DECREMENT": 'd',
+        "COMMIT": 'c',
+        "ABORT": 'a'
+    }
+
+    started = set()
+    done = set()
+    lines = content.splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            continue
+        matched = False
+        for op_name, op_code in op_map.items():
+            if line.startswith(f"{op_name}(") and line.endswith(")"):
+                content_part = line[len(op_name)+1:-1].split(',')
+                try:
+                    transaction = int(content_part[0].strip())
+                    variable = content_part[1].strip() if len(content_part) > 1 else None
+                    if op_code == 's':
+                        if transaction in started:
+                            return None, None, f"ERROR! Transaction {transaction} already started: {line}"
+                        elif transaction in done:
+                            return None, None, f"ERROR! Transaction {transaction} already completed: {line}"
+                        started.add(transaction)
+                    else:
+                        if transaction in done:
+                            return None, None, f"ERROR! Transaction {transaction} already completed: {line}"
+                        if transaction not in started:
+                            return None, None, f"ERROR! Transaction {transaction} has not been started: {line}"
+                        if op_code in ['c', 'a']:
+                            done.add(transaction)
+                            started.discard(transaction)
+                    op = Operation(op_code, transaction, variable)
+                    schedule.append(op)
+                    if transaction not in transactions:
+                        transactions[transaction] = Transaction(transaction)
+                    transactions[transaction].add_operation(op)
+                    matched = True
+                except (ValueError, IndexError):
+                    return None, None, f"ERROR! Invalid {op_name} operation format: {line}"
+                break
+        if not matched:
+            return None, None, f"ERROR! Unrecognized operation format: {line}"
+    if started:
+        return None, None, f"ERROR! Transactions not completed: {', '.join(map(str, started))}"
+    return schedule , transactions, None
+
+
 if __name__ == "__main__":
     s , t = parse_schedule("operations.txt")
     print(s)
