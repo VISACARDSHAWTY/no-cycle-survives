@@ -8,6 +8,7 @@ import os
 from recoverability import analyze_schedule
 from visualization import visualize_precedence_graph
 
+
 class ScheduleAnalyzer:
     def __init__(self):
         self.root = tk.Tk()
@@ -47,6 +48,8 @@ class ScheduleAnalyzer:
         self.tab_aca      = self._create_result_tab(result_notebook, "ACA")
         self.tab_strict   = self._create_result_tab(result_notebook, "Strict")
         self.tab_rigorous = self._create_result_tab(result_notebook, "Rigorous")
+        self.tab_logs = self._create_result_tab(result_notebook, "Execution Logs")
+      
 
         if os.path.exists("operations.txt"):
             self.load_file("operations.txt")
@@ -66,6 +69,7 @@ class ScheduleAnalyzer:
         text.config(state="disabled")
         return text
 
+    
     def _create_serial_tab(self, notebook):
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Serializability")
@@ -127,7 +131,8 @@ class ScheduleAnalyzer:
             return
 
         result = analyze_schedule(content)
-
+        trace_list = result.get("execution_trace", [])
+        self._set_result_text(self.tab_logs, "\n".join(trace_list))
         if result.get("error"):
             msg = f"PARSE ERROR\n{'═'*60}\n\n{result['error']}"
             for w in [self.serial_text, self.tab_recover, self.tab_aca, self.tab_strict, self.tab_rigorous]:
@@ -157,7 +162,7 @@ class ScheduleAnalyzer:
 
         # Switch to Serializability tab (graph button is here)
         self.serial_text.focus_set()
-
+       
     # === File handling (same as before) ===
     def open_files(self):
         files = filedialog.askopenfilenames(filetypes=[("Text files", "*.txt")])

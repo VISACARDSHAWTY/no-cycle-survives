@@ -44,3 +44,4 @@ def visualize_precedence_graph(graph_data):
     # Show the plot
     print("Displaying graph...")
     plt.show()
+

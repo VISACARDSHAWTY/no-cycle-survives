@@ -115,7 +115,7 @@ def analyze_schedule(content: str) -> dict:
 
     schedule, transactions, _ = parse_result
 
-    pg = precedence_graph(schedule)
+    pg, trace_data = precedence_graph(schedule)
     has_cyc = has_cycle(pg)
 
     rf, wa, aa, ci, fi = read_dependencies(schedule)
@@ -179,6 +179,7 @@ def analyze_schedule(content: str) -> dict:
         "access_after": aa,
         "commit_indices": ci,
         "precedence_graph": pg,
+        "execution_trace": trace_data, 
     }
 
 

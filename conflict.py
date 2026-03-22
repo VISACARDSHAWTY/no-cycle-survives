@@ -1,9 +1,13 @@
 from parser import *
 def precedence_graph(schedule):
     graph = {}
+    gui_trace = [] 
     i = 0
     for op in schedule:
-        print(f"{i}: Processing operation: {op}")
+        trace_line = f"{i}: Processing operation: {op}"
+        gui_trace.append(trace_line)
+        print(trace_line) 
+
         if op.type in ['s', 'c', 'a']:
             i = i + 1
             continue
@@ -15,10 +19,12 @@ def precedence_graph(schedule):
             if other_op.transaction != op.transaction and other_op.variable == op.variable:
                 if (op.type in ['w', 'i' , 'd'] or other_op.type in ['w', 'i', 'd']):
                     graph[op.transaction].add(other_op.transaction)
-                    print("Conflict detected between Operation {} and Operation {}".format(op, other_op))
+                    conflict_line = "Conflict detected between Operation {} and Operation {}".format(op, other_op)
+                    gui_trace.append(conflict_line)
+                    print(conflict_line) 
         i = i + 1
-    return graph
-
+    
+    return graph, gui_trace
 def has_cycle(graph):
     visited = set()
 
