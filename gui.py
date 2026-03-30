@@ -1,4 +1,3 @@
-# gui.py  (FIXED VERSION - buttons now appear immediately + graph button fixed)
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -19,7 +18,18 @@ class ScheduleAnalyzer:
         self.editors = {}
         self.current_pg = None
 
-        # Style - clean blue
+        # Menu Bar
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="New Schedule", command=self.new_schedule)
+        file_menu.add_command(label="Open Files...", command=self.open_files)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.quit)
+
+        # Style
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("TNotebook", background="#f5f6f5")
@@ -49,7 +59,6 @@ class ScheduleAnalyzer:
         self.tab_strict   = self._create_result_tab(result_notebook, "Strict")
         self.tab_rigorous = self._create_result_tab(result_notebook, "Rigorous")
         self.tab_logs = self._create_result_tab(result_notebook, "Execution Logs")
-      
 
         if os.path.exists("operations.txt"):
             self.load_file("operations.txt")
@@ -69,12 +78,10 @@ class ScheduleAnalyzer:
         text.config(state="disabled")
         return text
 
-    
     def _create_serial_tab(self, notebook):
         frame = ttk.Frame(notebook)
         notebook.add(frame, text="Serializability")
 
-        # Use GRID layout so the graph button ALWAYS shows immediately
         frame.grid_rowconfigure(1, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
@@ -108,8 +115,7 @@ class ScheduleAnalyzer:
 
     def show_graph(self):
         if not self.current_pg or len(self.current_pg) == 0:
-            messagebox.showwarning("No Graph Yet", 
-                "Please click 'Analyze' first.\n\n")
+            messagebox.showwarning("No Graph Yet", "Please click 'Analyze' first.\n\n")
             return
         try:
             visualize_precedence_graph(self.current_pg)
@@ -139,16 +145,13 @@ class ScheduleAnalyzer:
                 self._set_result_text(w, msg)
             return
 
-        # THIS IS THE FIX FOR "analyze first" error
         self.current_pg = result.get("precedence_graph", {})
 
-        # Serializability
         s = result["serializability"]
         stat_txt, color = self._format_status(s["status"])
         txt = f"{stat_txt}\n\n{s['cycle']}\n\nPrecedence Graph (text view):\n{'─'*50}\n{s['graph'] or '(no edges)'}"
         self._set_result_text(self.serial_text, txt, color)
 
-        # Other tabs
         for key, widget in [
             ("recoverability", self.tab_recover),
             ("aca", self.tab_aca),
@@ -160,10 +163,8 @@ class ScheduleAnalyzer:
             txt = f"{stat_txt}\n\n{data.get('message', '—')}"
             self._set_result_text(widget, txt, color)
 
-        # Switch to Serializability tab (graph button is here)
         self.serial_text.focus_set()
-       
-    # === File handling (same as before) ===
+
     def open_files(self):
         files = filedialog.askopenfilenames(filetypes=[("Text files", "*.txt")])
         for path in files:
