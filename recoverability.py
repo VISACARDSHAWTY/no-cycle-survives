@@ -126,13 +126,13 @@ def analyze_schedule(content: str) -> dict:
         "cycle": "Has cycle: YES (not conflict serializable)" if has_cyc else "Has cycle: NO ✓ (conflict serializable)",
         "status": "fail" if has_cyc else "pass"
     }
-    rec_ok, rec_msg = is_recoverable(rf, ci)
+    rec_ok, rec_msg = is_recoverable(rf, fi)
     recoverable_result = {
         "title": "Recoverability",
         "status": "pass" if rec_ok else "fail",
         "message": rec_msg
     }
-    aca_ok, aca_msg = is_aca(rf, ci)
+    aca_ok, aca_msg = is_aca(rf, fi)
     aca_result = {
         "title": "ACA (Avoid Cascading Aborts)",
         "status": "pass" if aca_ok else "fail",

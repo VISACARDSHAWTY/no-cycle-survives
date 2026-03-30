@@ -1,2 +1,1 @@
-# no-cycle-survives
-A modular system for analyzing database schedules using conflict-based serializability and recoverability checks.
+Install the required dependencies (matplotlib and networkx), then run the application by executing python gui.py. This will launch the graphical interface, where you can access and use all the available features and methods of the application
